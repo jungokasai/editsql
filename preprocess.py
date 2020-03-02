@@ -303,6 +303,11 @@ def parse_sql(sql_string, db_id, column_names, output_vocab, schema_tokens, sche
 
 def read_spider_split(split_json, interaction_list, database_schemas, column_names, output_vocab, schema_tokens, remove_from):
   with open(split_json) as f:
+    print(split_json)
+    print(split_json)
+    print(split_json)
+    print(split_json)
+    print(split_json)
     split_data = json.load(f)
   print('read_spider_split', split_json, len(split_data))
 
@@ -482,11 +487,18 @@ def preprocess(dataset, remove_from=False):
   print()
 
   if dataset == 'spider':
-    spider_dir = 'data/spider/'
-    database_schema_filename = 'data/spider/tables.json'
-    output_dir = 'data/spider_data'
+    spider_dir = 'data/spider_new/'
+    database_schema_filename = 'data/spider_new/tables.json'
+    output_dir = 'data/spider_data_new'
     if remove_from:
-      output_dir = 'data/spider_data_removefrom'
+      output_dir = 'data/spider_data_removefrom_new'
+    train_database, dev_database = read_db_split(spider_dir)
+  elif dataset == 'spider_train_plus':
+    spider_dir = 'data/spider_train_plus'
+    database_schema_filename = 'data/spider_train_plus/tables.json'
+    output_dir = 'data/spider_train_plus_data'
+    if remove_from:
+      output_dir = 'data/spider_train_plus_removefrom'
     train_database, dev_database = read_db_split(spider_dir)
   elif dataset == 'sparc':
     sparc_dir = 'data/sparc/'
@@ -521,7 +533,7 @@ def preprocess(dataset, remove_from=False):
   with open(output_database_schema_filename, 'w') as outfile:
     json.dump([v for k,v in database_schemas.items()], outfile, indent=4)
 
-  if dataset == 'spider':
+  if dataset in ['spider', 'spider_train_plus']:
     interaction_list = read_spider(spider_dir, database_schemas, column_names, output_vocab, schema_tokens, remove_from)
   elif dataset == 'sparc':
     interaction_list = read_sparc(sparc_dir, database_schemas, column_names, output_vocab, schema_tokens, remove_from)
@@ -532,12 +544,18 @@ def preprocess(dataset, remove_from=False):
 
   train_interaction = []
   for database_id in interaction_list:
-    if database_id not in dev_database:
+    if dataset == 'spider_train_plus':
       train_interaction += interaction_list[database_id]
+    else:
+      if database_id not in dev_database:
+          train_interaction += interaction_list[database_id]
 
   dev_interaction = []
   for database_id in dev_database:
-    dev_interaction += interaction_list[database_id]
+    try:
+        dev_interaction += interaction_list[database_id]
+    except:
+        pass
 
   print('train interaction: ', len(train_interaction))
   print('dev interaction: ', len(dev_interaction))
@@ -550,7 +568,7 @@ def preprocess(dataset, remove_from=False):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
-  parser.add_argument("--dataset", choices=('spider', 'sparc', 'cosql'), default='sparc')
+  parser.add_argument("--dataset", choices=('spider', 'spider_train_plus', 'sparc', 'cosql'), default='sparc')
   parser.add_argument('--remove_from', action='store_true', default=False)
   args = parser.parse_args()
   preprocess(args.dataset, args.remove_from)

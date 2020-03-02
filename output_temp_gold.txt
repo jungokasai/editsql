@@ -1,0 +1,1 @@
+select count ( * ) from singer	concert_singer

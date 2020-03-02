@@ -371,8 +371,9 @@ def postprocess(predictions, database_schema, remove_from=False):
     postprocess_sql = pred_sql_str
     if remove_from:
       postprocess_sql = postprocess_one(pred_sql_str, schema)
+      gold_sql = postprocess_one(gold_sql_str, schema) + '\t' + db_id
 
-    postprocess_sqls[db_id].append((postprocess_sql, interaction_id, turn_id))
+    postprocess_sqls[db_id].append((postprocess_sql, interaction_id, turn_id, gold_sql))
 
   # print (correct, total, float(correct)/total)
   return postprocess_sqls
@@ -411,16 +412,22 @@ def write_and_evaluate(postprocess_sqls, db_path, table_schema_path, gold_path, 
         db_list.append(db)
 
   output_file = 'output_temp.txt'
+  db_list = list(postprocess_sqls.keys())
+  print(gold_path)
   if dataset == 'spider':
     with open(output_file, "w") as f:
-      for db in db_list:
-        for postprocess_sql, interaction_id, turn_id in postprocess_sqls[db]:
-          f.write(postprocess_sql+'\n')
-
+      with open('output_temp_gold.txt', "w") as f_gold:
+        for db in db_list:
+          #if db == 'real_estate_properties':
+          #    continue
+          for postprocess_sql, interaction_id, turn_id, gold_sql in postprocess_sqls[db]:
+            f.write(postprocess_sql+'\n')
+            f_gold.write(gold_sql+'\n')
     command = 'python3 eval_scripts/evaluation.py --db {} --table {} --etype match --gold {} --pred {}'.format(db_path,
                                                                                                   table_schema_path,
                                                                                                   gold_path,
                                                                                                   os.path.abspath(output_file))
+    print(command)
   elif dataset in ['sparc', 'cosql']:
     cnt = 0
     with open(output_file, "w") as f:
@@ -435,7 +442,7 @@ def write_and_evaluate(postprocess_sqls, db_path, table_schema_path, gold_path, 
                                                                                                       table_schema_path,
                                                                                                       gold_path,
                                                                                                       os.path.abspath(output_file))
-  command += '; rm output_temp.txt'
+  #command += '; rm output_temp.txt'
   return command
 
 if __name__ == '__main__':
